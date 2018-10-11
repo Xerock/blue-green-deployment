@@ -1,0 +1,8 @@
+[loadbalancer]
+lb ansible_ssh_host=deployment_lb_1
+
+[containers]
+blue ansible_ssh_host=deployment_blue_1
+green ansible_ssh_host=deployment_green_1
+lb ansible_ssh_host=deployment_lb_1
+db ansible_ssh_host=deployment_db_1

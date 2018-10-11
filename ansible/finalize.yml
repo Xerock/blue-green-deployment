@@ -1,0 +1,36 @@
+---
+- name: Verify the deployment
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Check health of current app
+      uri:
+        url: "http://deployment_lb_1:80/"
+        method: GET
+      ignore_errors: true
+      register: result
+
+    - debug:
+        var: result
+
+- import_playbook: revert.yml
+  when: not (hostvars.localhost.result.status == 200)
+
+- name: Stop the previous verious
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Stop {{prev_color}} container
+      docker_container:
+        name: deployment_{{prev_color}}_1
+        state: stopped
+      register: output
+      when: result.status == 200
+
+    - debug:
+        var: output
+
+    - assert:
+        that:
+          - "not docker_container.State.Running"
+      when: result.status == 200

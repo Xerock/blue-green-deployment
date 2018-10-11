@@ -1,0 +1,62 @@
+---
+- name: Install necessary modules on docker host
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Install docker-py
+      pip:
+        name: docker
+        version: '3.1.4'
+
+    - name: Install docker-compose
+      pip:
+        name: docker-compose
+        version: '1.20.1'
+
+- name: Run the app
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Start database and loadbalancer if not started
+      docker_service:
+        project_src: deployment/
+        services:
+          - db
+          - lb
+        state: present
+        build: yes
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Determine if first run
+      set_fact:
+        first_run: "{{ (green.deployment_green_1 is undefined or not green.deployment_green_1.state.running) and (blue.deployment_blue_1 is undefined or not blue.deployment_blue_1.state.running) }}"
+
+    - debug:
+        var: first_run
+
+    - name: Start green app version if none is up
+      docker_service:
+        project_src: deployment/
+        services:
+          - green
+        state: present
+        build: yes
+      when: first_run
+      register: output
+
+    - debug:
+        var: output
+
+- name: Reload loadbalancer to link with green version if first run
+  hosts: loadbalancer
+  tasks:
+    - name: Reload loadbalancer
+      shell: haproxy -f /usr/local/etc/haproxy/haproxy.cfg -D -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
+      args:
+        executable: /bin/bash
+        chdir: /
+      when: hostvars.localhost.first_run
+      register: output

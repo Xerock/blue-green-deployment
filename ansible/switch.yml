@@ -1,0 +1,56 @@
+---
+- name: Start the next app version
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Dummy run of docker-service to get containers info
+      docker_service:
+        project_src: deployment/
+        services:
+
+    - name: Determine current version
+      set_fact:
+        next_color: "{{ 'blue' if green.deployment_green_1.state.running else 'green' }}"
+        prev_color: "{{ 'green' if green.deployment_green_1.state.running else 'blue' }}"
+
+    - name: Start {{ next_color }} container
+      docker_service:
+        project_src: deployment/
+        services:
+          - "{{ next_color }}"
+        build: yes
+        state: present
+      register: output
+
+    - debug:
+        var: output
+
+    - assert:
+        that:
+          - green.deployment_green_1.state.running
+          - blue.deployment_blue_1.state.running
+
+- name: Switch loadbalancer
+  hosts: loadbalancer
+  tasks:
+    - name: Update config file
+      lineinfile:
+        path: /usr/local/etc/haproxy/haproxy.cfg
+        regexp: "^\\s\\sserver"
+        line: "  server {{ hostvars.localhost.next_color }} deployment_{{ hostvars.localhost.next_color }}_1:3001 check inter 2000 rise 2 fall 3"
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Reload loadbalancer
+      shell: haproxy -f /usr/local/etc/haproxy/haproxy.cfg -D -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
+      args:
+        executable: /bin/bash
+        chdir: /
+      register: output
+
+    - debug:
+        var: output
+
+- import_playbook: finalize.yml

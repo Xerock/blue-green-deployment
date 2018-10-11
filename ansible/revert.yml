@@ -1,0 +1,33 @@
+---
+- name: Switch back the loadbalancer if deployment failed
+  hosts: loadbalancer
+  tasks:
+    - name: Update config file
+      lineinfile:
+        path: /usr/local/etc/haproxy/haproxy.cfg
+        regexp: "^\\s\\sserver"
+        line: "  server {{ hostvars.localhost.prev_color }} deployment_{{ hostvars.localhost.prev_color }}_1:3001 check inter 2000 rise 2 fall 3"
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Reload loadbalancer
+      shell: haproxy -f /usr/local/etc/haproxy/haproxy.cfg -D -p /var/run/haproxy.pid -sf $(cat /var/run/haproxy.pid)
+      args:
+        executable: /bin/bash
+        chdir: /
+      register: output
+
+    - debug:
+        var: output
+
+- name: Stop the broken app version
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Stop {{next_color}} container
+      docker_container:
+        name: deployment_{{next_color}}_1
+        state: stopped
+      register: output

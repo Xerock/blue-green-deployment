@@ -1,0 +1,37 @@
+version: '2'
+services:
+  green:
+    build: green
+    links:
+      - db
+    networks:
+      - bluegreen_network
+  blue:
+    build: blue
+    links:
+      - db
+    networks:
+      - bluegreen_network
+  lb:
+    build: lb
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - bluegreen_network
+    ports:
+      - 800:80
+  db:
+    image: mongo
+    volumes:
+      - data-db:/data/db
+    networks:
+      - bluegreen_network
+    ports:
+      - "27017:27017"
+
+volumes:
+  data-db:
+
+networks:
+  bluegreen_network:
+    external: true

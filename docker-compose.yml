@@ -1,0 +1,18 @@
+version: '2'
+services:
+  ansible:
+    build: ansible
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./ansible/deployment:/root/deployment
+      - ./ansible/playbook.yml:/root/playbook.yml
+      - ./ansible/setup.yml:/root/setup.yml
+      - ./ansible/switch.yml:/root/switch.yml
+      - ./ansible/finalize.yml:/root/finalize.yml
+      - ./ansible/revert.yml:/root/revert.yml
+    networks:
+      - bluegreen_network
+
+networks:
+  bluegreen_network:
+    external: true
