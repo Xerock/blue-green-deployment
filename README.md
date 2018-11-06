@@ -19,7 +19,7 @@ docker-compose up -d
 
 Pour exécuter le playbook ansible il faut maintenant faire la commande
 ```
-docker exec -it bluegreen_ansible_1 ansible_playbook playbook.yml
+docker exec -it bluegreen_ansible_1 ansible-playbook playbook.yml
 ```
 
 Vous pourrez par la suite arrête le conteneur ansible en exécutant la commande depuis le dossier blue-green
